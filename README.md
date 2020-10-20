@@ -13,6 +13,6 @@ To install a userscript from this repository, open the respective `*.user.js` fi
 Changed elements:
 - timeline items (downsize non-comments)
 - board cards (downsize and rearrange elements inside a card)
-- related lists (add lightyellow background to open issues and downsize closed issues)
+- related lists (add light yellow/orange background to open issues/MRs and downsize closed issues/MRs)
 
 </p></details>

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitLab focus
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.1.1
 // @description  Downsizes some unimportant and highlights some important elements.
 // @author       fabianvss@gmail.com
 // @match        *://gitlab.com/*
@@ -16,7 +16,7 @@
  * Changed elements:
  * - timeline items (downsize non-comments)
  * - board cards (downsize and rearrange elements inside a card)
- * - related lists (add lightyellow background to open issues and downsize closed issues)
+ * - related lists (add light yellow/orange background to open issues/MRs and downsize closed issues/MRs)
  */
 
 (function() {
@@ -85,6 +85,10 @@
 
         ul.related-items-list li:not(.gitlab-focus-closed) {
           background-color: lightyellow;
+        }
+
+        #related-merge-requests ul.related-items-list li:not(.gitlab-focus-closed) {
+          background-color: #ffeedf;
         }
         `
     document.body.append(style);
