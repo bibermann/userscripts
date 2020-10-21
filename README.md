@@ -14,5 +14,6 @@ Changed elements:
 - timeline items (downsize non-comments)
 - board cards (downsize and rearrange elements inside a card)
 - related lists (add light yellow/orange background to open issues/MRs and downsize closed issues/MRs)
+- placeholders font color (light gray)
 
 </p></details>
