@@ -8,12 +8,31 @@ To install a userscript from this repository, open the respective `*.user.js` fi
 
 ### [GitLab focus](gitlab-focus.user.js)
 
-<details><summary>Downsizes some unimportant and highlights some important elements.</summary><p>
+<details><summary>Increase GitLab productivity.</summary><p>
 
-Changed elements:
-- timeline items (downsize non-comments)
+New elements:
+- labels for issues in related issues lists
+
+Reformat elements:
 - board cards (downsize and rearrange elements inside a card)
+
+Highlight elements:
 - related lists (add light yellow/orange background to open issues/MRs and downsize closed issues/MRs)
-- placeholders font color (light gray)
+
+Dim elements:
+- timeline items (downsize non-comments)
+- placeholders (change font color to light gray)
+
+<details><summary>Screenshots - Issue</summary><p>
+
+![gitlab-focus-issue.webp](screenshots/gitlab-focus-issue.webp)
+
+</p></details>
+
+<details><summary>Screenshots - Board</summary><p>
+
+![gitlab-focus-board.webp](screenshots/gitlab-focus-board.webp)
+
+</p></details>
 
 </p></details>
