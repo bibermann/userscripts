@@ -3,7 +3,7 @@
 // @include      /^https?://(git|gl)\./
 // @name         GitLab focus
 // @namespace    http://tampermonkey.net/
-// @version      0.2.1
+// @version      0.2.2
 // @description  Increase GitLab productivity.
 // @author       Fabian Sandoval Saldias <fabianvss@gmail.com>
 // @author       Dimitar Pavlov
@@ -16,6 +16,7 @@
  *
  * New elements:
  * - labels for issues in related issues lists
+ * - total weight with progress bar in epic views
  *
  * Reformat elements:
  * - board cards (downsize and rearrange elements inside a card)
@@ -29,6 +30,9 @@
  *
  * Changelog
  * =========
+ *
+ * v0.2.2 (2020-11-20)
+ * - show total weight in epic view
  *
  * v0.2.1 (2020-11-20)
  * - also process issue lists in epics
@@ -144,12 +148,14 @@
         `
     document.body.append(style);
 
+    let epicUrlParts = window.location.href.match(/^(.*)\/groups\/(.*)\/-\/epics\/([0-9]+)(?:#.*)?$/);
+
     $(document).ready(function() {
         mutationObserver.observe($(".content-wrapper").get()[0], whatToObserve);
     });
 
-    var whatToObserve = {childList: true, attributes: false, subtree: true, attributeOldValue: false};
-    var mutationObserver = new MutationObserver(function(mutationRecords) {
+    const whatToObserve = {childList: true, attributes: false, subtree: true, attributeOldValue: false};
+    const mutationObserver = new MutationObserver(function(mutationRecords) {
         $.each(mutationRecords, function(index, mutationRecord) {
             if (mutationRecord.type === 'childList') {
                 if (mutationRecord.addedNodes.length > 0) {
@@ -167,23 +173,58 @@
                 processRelatedItemsListItem(el);
             }
         });
+
+        if(epicUrlParts !== null)
+        {
+            let issueCountBadge = $('.issue-count-badge');
+            if(issueCountBadge.length === 1)
+            {
+                const el = $(issueCountBadge[0]);
+                if(!el.hasClass('gitlab-focus-processed')) {
+                    el.addClass('gitlab-focus-processed');
+                    processEpicIssueCountBadge(el);
+                }
+            }
+        }
     }
 
     function processRelatedItemsListItem(el) {
         if(el.find('svg.issue-token-state-icon-closed').length > 0)
             el.addClass('gitlab-focus-closed');
 
-        var url = extractRelatedIssueJSONUrl(el);
+        const url = extractRelatedIssueJSONUrl(el);
         $.getJSON(url, function(data) {
-            var labelsArea = prepareLabelsArea(el);
+            const labelsArea = prepareLabelsArea(el);
             $(data.labels).each(function(index, jsonElement) {
-                labelsArea.append(createLabelElement(jsonElement, url,   data.project_id));
+                labelsArea.append(createLabelElement(jsonElement, url, data.project_id));
             });
         });
     }
 
-    var labelsAreaTemplate = '<div class="item-label-area item-path-id d-flex align-items-center mr-2 mt-2 mt-xl-0 ml-xl-2 flex-grow justify-content-end"></div>';
-    var labelTemplate = `
+    function processEpicIssueCountBadge(el) {
+        $.post(
+            `${epicUrlParts[1]}/api/graphql`,
+            {
+                query: `{
+                    group(fullPath: "${epicUrlParts[2]}"){
+                        epic(iid: ${epicUrlParts[3]}){
+                            descendantWeightSum{
+                                closedIssues,
+                                openedIssues,
+                            }
+                        }
+                    }
+                }`
+            },
+            function(data) {
+                createIssueWeightElement(data.data).insertAfter(el);
+            },
+            'json'
+        );
+    }
+
+    const labelsAreaTemplate = '<div class="item-label-area item-path-id d-flex align-items-center mr-2 mt-2 mt-xl-0 ml-xl-2 flex-grow justify-content-end"></div>';
+    const labelTemplate = `
         <span
             class="gl-label gl-label-sm"
             style="color: {TCOLOR}"
@@ -213,7 +254,7 @@
             &nbsp;
         </span>;
         `
-    var scopedLabelTemplate = `
+    const scopedLabelTemplate = `
         <span
             class="gl-label gl-label-scoped gl-label-sm"
             style="--label-inset-border: inset 0 0 0 1px {COLOR}; color: {TCOLOR}"
@@ -252,6 +293,29 @@
         </span>;
         `
 
+    const issueWeightTemplate = `
+        <div class="gl-display-inline-flex text-secondary">
+            <span class="d-inline-flex align-items-center has-tooltip" data-html="true" data-title="Weight<br />{OPENED} to do, {CLOSED} completed">
+                <svg data-testid="weight-icon" class="board-card-info-icon gl-icon s16">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" id="weight"><path fill-rule="evenodd" d="M10.236 6a3 3 0 1 0-4.472 0H3l-1.736 6.483A2 2 0 0 0 3.196 15h9.605a2 2 0 0 0 1.932-2.517L13 6h-2.764zM9 4a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-5.804 9l1.339-5h6.93l1.336 5H3.196z"></path></svg>
+                </svg>
+                &nbsp;{TOTAL}
+                <div style="width: 1rem"></div>
+                <div class="d-flex align-items-center">
+                    <div style="background-color: #1068bf; width: 100px; padding: 0.125rem">
+                        <div class="epic-bar-progress flex-grow-1 progress" aria-hidden="true" value="{PERCENT}">
+                            <div role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{PERCENT}" class="progress-bar" style="width: {PERCENT}%;"></div>
+                        </div>
+                    </div>
+                    &nbsp;
+                    <div class="gl-font-sm d-flex align-items-center text-nowrap">
+                        <p aria-label="{PERCENT}%% weight completed" class="m-0">{PERCENTROUNDED}%</p>
+                    </div>
+                </div>
+            </span>
+        </div>
+        `
+
     function extractRelatedIssueJSONUrl(el) { return el.find('.sortable-link').attr('href') + '.json'; }
     function extractIssuesBaseLabelUrl(url) { return url.substring(0, url.lastIndexOf('/')) + '?label_name='; }
     function formatScopedLabelTooltip(description) { return description !== null ? '<span class=\'font-weight-bold scoped-label-tooltip-title\'>Scoped label</span><br />' + description : '' }
@@ -260,7 +324,7 @@
     function prepareLabelsArea(el) {
         el.find('div.item-contents').removeClass('flex-xl-nowrap');
         el.find('div.item-meta').removeClass('justify-content-start').removeClass('justify-content-md-between');
-        var itemPathArea = el.find('div.item-path-area');
+        const itemPathArea = el.find('div.item-path-area');
         if(itemPathArea.length === 1)
             return $(labelsAreaTemplate).insertAfter(itemPathArea);  // in issue view
         else
@@ -291,5 +355,19 @@
                 .replace(/{DESC}/g, formatScopedLabelTooltip(json.description))
                 .replace(/{URL}/g, extractIssuesBaseLabelUrl(issueUrl) + encodeURIComponent(json.title))
             );
+    }
+
+    function createIssueWeightElement(json) {
+        const opened = json.group.epic.descendantWeightSum.openedIssues;
+        const closed = json.group.epic.descendantWeightSum.closedIssues;
+        const total = opened + closed;
+        const percent = total === 0 ? 0 : 100 / total * closed;
+        return $(issueWeightTemplate
+            .replace(/{OPENED}/g, opened)
+            .replace(/{CLOSED}/g, closed)
+            .replace(/{TOTAL}/g, total)
+            .replace(/{PERCENT}/g, percent)
+            .replace(/{PERCENTROUNDED}/g, Math.round(percent))
+        );
     }
 })();

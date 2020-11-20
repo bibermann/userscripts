@@ -12,6 +12,7 @@ To install a userscript from this repository, open the respective `*.user.js` fi
 
 New elements:
 - labels for issues in related issues lists
+- total weight with progress bar in epic views
 
 Reformat elements:
 - board cards (downsize and rearrange elements inside a card)
