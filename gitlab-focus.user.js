@@ -3,7 +3,7 @@
 // @include      /^https?://(git|gl)\./
 // @name         GitLab focus
 // @namespace    http://tampermonkey.net/
-// @version      0.2
+// @version      0.2.1
 // @description  Increase GitLab productivity.
 // @author       Fabian Sandoval Saldias <fabianvss@gmail.com>
 // @author       Dimitar Pavlov
@@ -30,6 +30,9 @@
  * Changelog
  * =========
  *
+ * v0.2.1 (2020-11-20)
+ * - also process issue lists in epics
+ *
  * v0.2 (2020-11-18)
  * - add labels to related issues
  * - fix labels in board cards are not aligned right when spanning multiple lines
@@ -50,6 +53,7 @@
  *     which in turn is based on a UserScript by Simon Pamies;
  *     see here for the code: https://gitlab.com/gitlab-org/gitlab/-/issues/7759#note_229973031
  */
+
 
 (function() {
     'use strict';
@@ -104,9 +108,9 @@
           font-size: smaller;
         }
 
-        /* closed issues in related lists */
+        /* closed issues in issue lists (linked issues and in epics) and related MR lists */
 
-        .gitlab-focus-closed .item-title {
+        .gitlab-focus-closed .item-title * {
           font-size: smaller;
         }
 
@@ -114,9 +118,10 @@
           transform: scale(0.75);
         }
 
-        /* colorize non-closed issues in related lists */
+        /* colorize non-closed issues in issue lists (linked issues and in epics) and related MR lists */
 
-        ul.related-items-list li:not(.gitlab-focus-closed) {
+        div:not(.sortable-container) > ul.related-items-list li:not(.gitlab-focus-closed),
+        div.sortable-container > ul.related-items-list li:not(.gitlab-focus-closed) .card {
           background-color: lightyellow;
         }
 
@@ -140,7 +145,7 @@
     document.body.append(style);
 
     $(document).ready(function() {
-        mutationObserver.observe($(".content-block").get()[0], whatToObserve);
+        mutationObserver.observe($(".content-wrapper").get()[0], whatToObserve);
     });
 
     var whatToObserve = {childList: true, attributes: false, subtree: true, attributeOldValue: false};
@@ -255,7 +260,11 @@
     function prepareLabelsArea(el) {
         el.find('div.item-contents').removeClass('flex-xl-nowrap');
         el.find('div.item-meta').removeClass('justify-content-start').removeClass('justify-content-md-between');
-        return $(labelsAreaTemplate).insertAfter(el.find('div.item-path-area'));
+        var itemPathArea = el.find('div.item-path-area');
+        if(itemPathArea.length === 1)
+            return $(labelsAreaTemplate).insertAfter(itemPathArea);  // in issue view
+        else
+            return $(labelsAreaTemplate).appendTo(el.find('div.item-meta'));  // in epic view
     }
 
     function createLabelElement(json, issueUrl, projectId) {
