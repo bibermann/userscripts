@@ -3,12 +3,13 @@
 // @include      /^https?://(git|gl)\./
 // @name         GitLab focus
 // @namespace    http://tampermonkey.net/
-// @version      0.2.2
+// @version      0.2.3
 // @description  Increase GitLab productivity.
 // @author       Fabian Sandoval Saldias <fabianvss@gmail.com>
 // @author       Dimitar Pavlov
 // @author       Simon Pamies
 // @grant        none
+// @require      http://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js
 // ==/UserScript==
 
 /* Detailed description
@@ -30,6 +31,9 @@
  *
  * Changelog
  * =========
+ *
+ * v0.2.3 (2021-07-13)
+ * - fixes to work with GitLab 14.0.5-ee
  *
  * v0.2.2 (2020-11-20)
  * - show total weight in epic view
@@ -151,6 +155,9 @@
     let epicUrlParts = window.location.href.match(/^(.*)\/groups\/(.*)\/-\/epics\/([0-9]+)(?:#.*)?$/);
 
     $(document).ready(function() {
+        $.ajaxSetup({
+            headers: {'X-CSRF-TOKEN': $('meta[name=csrf-token]').attr('content')},
+        });
         mutationObserver.observe($(".content-wrapper").get()[0], whatToObserve);
     });
 
@@ -209,8 +216,8 @@
                     group(fullPath: "${epicUrlParts[2]}"){
                         epic(iid: ${epicUrlParts[3]}){
                             descendantWeightSum{
-                                closedIssues,
-                                openedIssues,
+                                closedIssues
+                                openedIssues
                             }
                         }
                     }
